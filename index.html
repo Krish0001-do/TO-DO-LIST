@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Neon To-Do List</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="Todo-App">
+      <h1>To-Do List</h1>
+
+      <div class="stat-container">
+        <div class="details">
+          <h3>Keep it up!</h3>
+          <div id="progressbar">
+            <div id="progress"></div>
+          </div>
+        </div>
+        <div class="stat-number">
+          <p id="numbers">0 / 0</p>
+        </div>
+      </div>
+
+      <form class="input-area">
+        <input type="text" id="task-input" placeholder="Add a new task..." />
+        <button type="submit" id="add-task-btn"><i class="fa-solid fa-plus"></i></button>
+      </form>
+
+      <!-- Sounds -->
+      <audio id="complete-sound" src="./sounds/positive_beeps-85504.mp3" preload="auto"></audio>
+      <audio id="delete-sound" src="./sounds/recyclebin-102273 (mp3cut.net).mp3" preload="auto"></audio>
+     
+
+
+      <!-- Empty image -->
+      <img src="./images/ChatGPT Image Jun 11, 2025, 01_17_14 AM.png" alt="No Tasks" class="empty-image" style="width: 300px; display: none;" />
+
+      <!-- Task list -->
+      <ul id="task-list"></ul>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const taskInput = document.getElementById('task-input');
+      const addTaskBtn = document.getElementById('add-task-btn');
+      const taskList = document.getElementById('task-list');
+      const emptyImage = document.querySelector('.empty-image');
+      const completeSound = document.getElementById('complete-sound');
+      const deleteSound = document.getElementById('delete-sound');
+      const progressBar = document.getElementById('progress');
+      const progressNumbers = document.getElementById('numbers');
+
+      const updateProgress = () => {
+        const total = taskList.children.length;
+        const completed = taskList.querySelectorAll('.checkbox:checked').length;
+        const percent = total ? (completed / total) * 100 : 0;
+        progressBar.style.width = `${percent}%`;
+        progressNumbers.textContent = `${completed} / ${total}`;
+      };
+
+      const toggleEmptyState = () => {
+        emptyImage.style.display = taskList.children.length === 0 ? 'block' : 'none';
+      };
+
+      const saveTasks = () => {
+        const tasks = [];
+        taskList.querySelectorAll('li').forEach(li => {
+          const text = li.querySelector('span').textContent;
+          const completed = li.querySelector('.checkbox').checked;
+          tasks.push({ text, completed });
+        });
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+        updateProgress();
+      };
+
+      const loadTasks = () => {
+        const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        tasks.forEach(({ text, completed }) => createTask(text, completed));
+        toggleEmptyState();
+        updateProgress();
+      };
+
+      const createTask = (taskText, completed = false) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <input type="checkbox" class="checkbox" ${completed ? 'checked' : ''}>
+          <span class="${completed ? 'completed' : ''}">${taskText}</span>
+          <div class="task-buttons">
+            <button class="edit-btn"><i class="fa-solid fa-pen"></i></button>
+            <button class="delete-btn"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `;
+        taskList.appendChild(li);
+        toggleEmptyState();
+        updateProgress();
+
+        const checkbox = li.querySelector('.checkbox');
+        const span = li.querySelector('span');
+
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) {
+            span.classList.add('completed');
+            li.classList.add('completed');
+            completeSound.currentTime = 0;
+            completeSound.play();
+          } else {
+            span.classList.remove('completed');
+            li.classList.remove('completed');
+          }
+          saveTasks();
+        });
+
+        li.querySelector('.delete-btn').addEventListener('click', () => {
+          if (confirm("Delete this task?")) {
+            deleteSound.currentTime = 0;
+            deleteSound.play();
+            li.remove();
+            toggleEmptyState();
+            saveTasks();
+          }
+        });
+
+        li.querySelector('.edit-btn').addEventListener('click', () => {
+          const newText = prompt('Edit task:', span.textContent);
+          if (newText !== null && newText.trim() !== '') {
+            span.textContent = newText.trim();
+            saveTasks();
+          }
+        });
+      };
+
+      const addTask = (event) => {
+        event.preventDefault();
+        const text = taskInput.value.trim();
+        if (!text) return;
+        createTask(text);
+        taskInput.value = '';
+        saveTasks();
+      };
+
+      addTaskBtn.addEventListener('click', addTask);
+      taskInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addTask(e);
+      });
+
+      loadTasks();
+    });
+  </script>
+</body>
+</html>
